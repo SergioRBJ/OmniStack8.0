@@ -1,27 +1,45 @@
-const axios = require('axios');
-const Dev = require('../models/Dev');
+const axios = require("axios");
+const Dev = require("../models/Dev");
 
 module.exports = {
-   async store(req, res) {
-        const { username } = req.body;
+  async index(req, res) {
+    const { user } = req.headers;
 
-        const response = await axios.get(`https://api.github.com/users/${username}`);
+    const loggedDev = await Dev.findById(user);
 
-        const userEx = await Dev.findOne({ user:username });
+    const users = await Dev.find({
+      $and: [
+        { _id: { $ne: user } },
+        { _id: { $nin: loggedDev.likes } },
+        { _id: { $nin: loggedDev.dislikes } }
+      ]
+    });
 
-        if (userEx) {
-            return res.json(userEx);
-        }
+    return res.json(users);
+  },
 
-        const { name, bio, avatar_url: avatar } = response.data;
+  async store(req, res) {
+    const { username } = req.body;
 
-        const dev = await Dev.create({
-            name,
-            user: username,
-            bio,
-            avatar
-        });
+    const response = await axios.get(
+      `https://api.github.com/users/${username}`
+    );
 
-        return res.json(dev);
+    const userEx = await Dev.findOne({ user: username });
+
+    if (userEx) {
+      return res.json(userEx);
     }
+
+    const { name, bio, avatar_url: avatar } = response.data;
+
+    const dev = await Dev.create({
+      name,
+      user: username,
+      bio,
+      avatar
+    });
+
+    return res.json(dev);
+  }
 };
